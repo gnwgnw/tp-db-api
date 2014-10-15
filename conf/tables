@@ -1,0 +1,26 @@
+Users
+	username
+	name
+	about
+	isAnonymous	- bool
+	email		- uniq, pk?
+	id			- int, autoincrement
+
+	???
+	subscriptions
+
+Forums
+
+Posts
+
+Threads
+
+Followers
+	follower - кто
+	followee - за кем
+
+Subscriptions - ?
+
+Как запретить подписываться на самого себя?
+Таблица Followers
+Что лучше: исключения или лишние запросы?

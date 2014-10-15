@@ -1,0 +1,10 @@
+uwsgi:
+    pidfile: /tmp/uwsgi_db.pid
+    uwsgi-socket: /tmp/db.sock
+    touch-reload: /home/gexogen/Projects/db/conf/uwsgi
+    pythonpath: /home/gexogen/Projects/db
+    module: db
+    callable: app
+    daemonize: /home/gexogen/Projects/db/log/uwsgi.log
+    master: 1
+    workers: 8
