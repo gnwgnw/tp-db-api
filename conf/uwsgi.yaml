@@ -4,7 +4,7 @@ uwsgi:
     touch-reload: /home/gexogen/Projects/db/conf/uwsgi
     pythonpath: /home/gexogen/Projects/db
     module: db
-    callable: app
+    callable: db_app
     daemonize: /home/gexogen/Projects/db/log/uwsgi.log
     master: 1
     workers: 8
