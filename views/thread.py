@@ -1,16 +1,14 @@
 import MySQLdb
-
-from flask import request, g, jsonify
-
-from db_app import app
-from settings import prefix
+from flask import Blueprint, request, jsonify
+from settings import prefix, db_connection
 from utils import db_queryes
-
 
 __author__ = 'gexogen'
 
+thread_api = Blueprint('thread_api', __name__)
 
-@app.route(prefix + '/thread/create/', methods=['POST'])
+
+@thread_api.route(prefix + '/thread/create/', methods=['POST'])
 def thread_create():
     is_deleted = request.json.get('isDeleted', False)
     forum = request.json.get('forum', None)
@@ -21,29 +19,38 @@ def thread_create():
     message = request.json.get('message', None)
     slug = request.json.get('slug', None)
 
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
     try:
-        g.cursor.execute("""INSERT INTO `threads`
+        cursor.execute("""INSERT INTO `threads`
                           (`isDeleted`, `forum`, `title`, `isClosed`, `user`, `date`, `message`, `slug`)
                           VALUE (%s, %s, %s, %s, %s, %s, %s, %s);""",
                          (is_deleted, forum, title, is_closed, user, date, message, slug))
-        g.db.commit()
+
+        thread_id = cursor.lastrowid
+
+        db_connection.commit()
 
     except MySQLdb.Error:
-        g.db.rollback()
+        db_connection.rollback()
 
-    g.cursor.execute("""SELECT * FROM `threads` WHERE `slug` = %s""", slug)
-    thread = g.cursor.fetchone()
+    cursor.execute("""SELECT * FROM `threads` WHERE `id` = %s""", thread_id)
+    thread = cursor.fetchone()
 
+    cursor.close()
     return jsonify(code=0, response=thread)
 
 
-@app.route(prefix + '/thread/details/')
+@thread_api.route(prefix + '/thread/details/')
 def thread_details():
     id = request.args.get('thread', None)
     related = request.args.getlist('related')
+    id = int(id)
 
     if 'thread' in related:
         return jsonify(code=3, response='Error thread')
+
+    if id is None or id < 1:
+        return jsonify(code=1, response="thread_details error")  # TODO error code
 
     thread = db_queryes.thread_details(id)
 
@@ -58,7 +65,7 @@ def thread_details():
     return jsonify(code=0, response=thread)
 
 
-@app.route(prefix + '/thread/list/')
+@thread_api.route(prefix + '/thread/list/')
 def thread_list():
     forum = request.args.get('forum', None)
     user = request.args.get('user', None)  # TODO: bad code - if state
@@ -66,188 +73,218 @@ def thread_list():
     limit = request.args.get('limit', 18446744073709551615)  # TODO: hard code
     order = request.args.get('order', 'desc')
 
+    if user is None and forum is None:
+        return jsonify(code=1, response="error")  # TODO error code
+
     limit = long(limit)  # TODO: bad code
 
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
     if forum is not None:
         if order == 'desc':
-            g.cursor.execute(
+            cursor.execute(
                 """SELECT * FROM `threads` WHERE `forum` = %s AND `date` >= %s ORDER BY `date` DESC LIMIT %s;""",
                 (forum, since, limit))
         else:
-            g.cursor.execute(
+            cursor.execute(
                 """SELECT * FROM `threads` WHERE `forum` = %s AND `date` >= %s ORDER BY `date` ASC LIMIT %s;""",
                 (forum, since, limit))
     else:
         if order == 'desc':
-            g.cursor.execute(
+            cursor.execute(
                 """SELECT * FROM `threads` WHERE `user` = %s AND `date` >= %s ORDER BY `date` DESC LIMIT %s;""",
                 (user, since, limit))
         else:
-            g.cursor.execute(
+            cursor.execute(
                 """SELECT * FROM `threads` WHERE `user` = %s AND `date` >= %s ORDER BY `date` ASC LIMIT %s;""",
                 (user, since, limit))
 
-    threads = [i for i in g.cursor.fetchall()]
+    threads = [i for i in cursor.fetchall()]
 
     for thread in threads:
         thread.update({'date': str(thread['date'])})  # TODO: bad code
 
+    cursor.close()
     return jsonify(code=0, response=threads)
 
 
-@app.route(prefix + '/thread/listPosts/')
+@thread_api.route(prefix + '/thread/listPosts/')
 def thread_list_posts():
     thread = request.args.get('thread', None)
     since = request.args.get('since', '0000-00-00 00:00:00')
     limit = request.args.get('limit', 18446744073709551615)  # TODO: hard code
     order = request.args.get('order', 'desc')
 
+    if thread is None:
+        return jsonify(code=1, response="thread_listPosts error")  # TODO error code
+
     limit = long(limit)  # TODO: bad code
     thread = int(thread)  # TODO: bad code
 
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+
     if order == 'desc':
-        g.cursor.execute(
+        cursor.execute(
             """SELECT * FROM `posts` WHERE `thread` = %s AND `date` >= %s ORDER BY `date` DESC LIMIT %s;""",
             (thread, since, limit))  # TODO: bad code - excess condition
     else:
-        g.cursor.execute(
+        cursor.execute(
             """SELECT * FROM `posts` WHERE `thread` = %s AND `date` >= %s ORDER BY `date` ASC LIMIT %s;""",
             (thread, since, limit))  # TODO: bad code - excess condition
 
-    posts = [i for i in g.cursor.fetchall()]
+    posts = [i for i in cursor.fetchall()]
 
     for post in posts:
         post.update({'date': str(post['date'])})  # TODO: bad code
 
+    cursor.close()
     return jsonify(code=0, response=posts)
 
 
-@app.route(prefix + '/thread/remove/', methods=['POST'])
+@thread_api.route(prefix + '/thread/remove/', methods=['POST'])
 def thread_remove():
     thread = request.json.get('thread', None)
     thread = int(thread)  # TODO: bad code
 
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+
     try:
-        g.cursor.execute("""UPDATE `threads` SET `isDeleted` = TRUE WHERE `id` = %s;""", thread)
-        g.cursor.execute("""UPDATE `posts` SET `isDeleted` = TRUE WHERE `thread` = %s;""", thread)
-        g.db.commit()
+        cursor.execute("""UPDATE `threads` SET `isDeleted` = TRUE, `posts` = 0 WHERE `id` = %s;""", thread)
+        cursor.execute("""UPDATE `posts` SET `isDeleted` = TRUE WHERE `thread` = %s;""", thread)
+        db_connection.commit()
 
     except MySQLdb.Error:
-        g.db.rollback()
+        db_connection.rollback()
 
+    cursor.close()
     return jsonify(code=0, response={'thread': thread})
 
 
-@app.route(prefix + '/thread/restore/', methods=['POST'])
+@thread_api.route(prefix + '/thread/restore/', methods=['POST'])
 def thread_restore():
     thread = request.json.get('thread', None)
     thread = int(thread)
 
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
     try:
-        g.cursor.execute("""UPDATE `threads` SET `isDeleted` = FALSE WHERE `id` = %s;""", thread)  # TODO: make view
-        g.cursor.execute("""UPDATE `posts` SET `isDeleted` = FALSE WHERE `thread` = %s;""", thread)
-        g.db.commit()
+        count = cursor.execute("""UPDATE `posts` SET `isDeleted` = FALSE WHERE `thread` = %s;""", thread)
+        cursor.execute("""UPDATE `threads` SET `isDeleted` = FALSE, `posts` = %s WHERE `id` = %s;""", (count, thread))  # TODO: make view
+        db_connection.commit()
     except MySQLdb.Error:
-        g.db.rollback()
+        db_connection.rollback()
 
+    cursor.close()
     return jsonify(code=0, response={'thread': thread})
 
 
-@app.route(prefix + '/thread/close/', methods=['POST'])
+@thread_api.route(prefix + '/thread/close/', methods=['POST'])
 def thread_close():
+    print request.content_type
+
     thread = request.json.get('thread', None)
     thread = int(thread)
 
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
     try:
-        g.cursor.execute("""UPDATE `threads` SET `isClosed` = TRUE WHERE `id` = %s;""", thread)  # TODO: make view
-        g.db.commit()
+        cursor.execute("""UPDATE `threads` SET `isClosed` = TRUE WHERE `id` = %s;""", thread)  # TODO: make view
+        db_connection.commit()
     except MySQLdb.Error:
-        g.db.rollback()
+        db_connection.rollback()
 
+    cursor.close()
     return jsonify(code=0, response={'thread': thread})
 
 
-@app.route(prefix + '/thread/open/', methods=['POST'])
+@thread_api.route(prefix + '/thread/open/', methods=['POST'])
 def thread_open():
     thread = request.json.get('thread', None)
     thread = int(thread)
 
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
     try:
-        g.cursor.execute("""UPDATE `threads` SET `isClosed` = FALSE WHERE `id` = %s;""", thread)  # TODO: make view
-        g.db.commit()
+        cursor.execute("""UPDATE `threads` SET `isClosed` = FALSE WHERE `id` = %s;""", thread)  # TODO: make view
+        db_connection.commit()
     except MySQLdb.Error:
-        g.db.rollback()
+        db_connection.rollback()
 
+    cursor.close()
     return jsonify(code=0, response={'thread': thread})
 
 
-@app.route(prefix + '/thread/update/', methods=['POST'])
+@thread_api.route(prefix + '/thread/update/', methods=['POST'])
 def thread_update():
     message = request.json.get('message', None)
     slug = request.json.get('slug', None)
     thread = request.json.get('thread', None)
     thread = int(thread)
 
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
     try:
-        g.cursor.execute("""UPDATE `threads` SET `message` = %s, `slug` = %s WHERE `id` = %s;""",
+        cursor.execute("""UPDATE `threads` SET `message` = %s, `slug` = %s WHERE `id` = %s;""",
                          (message, slug, thread))  # TODO: make view
-        g.db.commit()
+        db_connection.commit()
     except MySQLdb.Error:
-        g.db.rollback()
+        db_connection.rollback()
 
     thread = db_queryes.thread_details(thread)
 
+    cursor.close()
     return jsonify(code=0, response={'thread': thread})
 
 
-@app.route(prefix + '/thread/vote/', methods=['POST'])
+@thread_api.route(prefix + '/thread/vote/', methods=['POST'])
 def thread_vote():
     vote = request.json.get('vote', None)
     thread = request.json.get('thread', None)
     thread = int(thread)
 
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
     try:
         if vote == 1:
-            g.cursor.execute("""UPDATE `threads` SET `likes` = `likes` + 1, `points` = `points` + 1 WHERE `id` = %s;""",
+            cursor.execute("""UPDATE `threads` SET `likes` = `likes` + 1, `points` = `points` + 1 WHERE `id` = %s;""",
                              thread)
         else:
-            g.cursor.execute(
+            cursor.execute(
                 """UPDATE `threads` SET `dislikes` = `dislikes` + 1, `points` = `points` - 1 WHERE `id` = %s;""",
                 thread)
-        g.db.commit()
+        db_connection.commit()
 
     except MySQLdb.Error:
-        g.db.rollback()
+        db_connection.rollback()
 
     thread = db_queryes.thread_details(thread)
 
+    cursor.close()
     return jsonify(code=0, response=thread)
 
 
-@app.route(prefix + '/thread/subscribe/', methods=['POST'])
+@thread_api.route(prefix + '/thread/subscribe/', methods=['POST'])
 def thread_subscribe():
     user = request.json.get('user', None)
     thread = request.json.get('thread', None)
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
 
     try:
-        g.cursor.execute("""INSERT INTO `users_threads` (`user`, `thread`) VALUE (%s, %s);""",
+        cursor.execute("""INSERT INTO `users_threads` (`user`, `thread`) VALUE (%s, %s);""",
                          (user, thread))
-        g.db.commit()
+        db_connection.commit()
     except MySQLdb.Error:
-        g.db.rollback()
+        db_connection.rollback()
 
+    cursor.close()
     return jsonify(code=0, response={'thread': thread, 'user': user})
 
 
-@app.route(prefix + '/thread/unsubscribe/', methods=['POST'])
+@thread_api.route(prefix + '/thread/unsubscribe/', methods=['POST'])
 def thread_unsubscribe():
     user = request.json.get('user', None)
     thread = request.json.get('thread', None)
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
 
     try:
-        g.cursor.execute("""DELETE FROM `users_threads` WHERE `user` = %s AND `thread` = %s;""", (user, thread))
-        g.db.commit()
+        cursor.execute("""DELETE FROM `users_threads` WHERE `user` = %s AND `thread` = %s;""", (user, thread))
+        db_connection.commit()
     except MySQLdb.Error:
-        g.db.rollback()
+        db_connection.rollback()
 
+    cursor.close()
     return jsonify(code=0, response={'thread': thread, 'user': user})

@@ -3,8 +3,6 @@ uwsgi:
     uwsgi-socket: /tmp/db.sock
     touch-reload: /home/gexogen/Projects/db/conf/uwsgi
     pythonpath: /home/gexogen/Projects/db
-    module: db
-    callable: db_app
+    module: run_server
+    callable: app
     daemonize: /home/gexogen/Projects/db/log/uwsgi.log
-    master: 1
-    workers: 8
