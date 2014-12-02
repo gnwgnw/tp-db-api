@@ -41,8 +41,7 @@ def post_create():
     except MySQLdb.Error:
         db_connection.rollback()
 
-    # cursor.execute("""SELECT * FROM `posts` WHERE `id` = %s""", post_id)
-    # post = cursor.fetchone()
+    cursor.close()
 
     post = {
         "date": date,
@@ -58,7 +57,6 @@ def post_create():
         "thread": thread,
         "user": user
     }
-    cursor.close()
     return jsonify(code=0, response=post)
 
 
@@ -75,20 +73,23 @@ def post_details():
     if id < 1:
         return jsonify(code=1, response='Error post detail')
 
-    post = db_queryes.post_details(id)
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+
+    post = db_queryes.post_details(cursor, id)
 
     if 'user' in related:
-        user = db_queryes.user_details(post['user'])
+        user = db_queryes.user_details(cursor, post['user'])
         post.update({'user': user})
 
     if 'forum' in related:
-        forum = db_queryes.forum_details(post['forum'])
+        forum = db_queryes.forum_details(cursor, post['forum'])
         post.update({'forum': forum})
 
     if 'thread' in related:
-        thread = db_queryes.thread_details(post['thread'])
+        thread = db_queryes.thread_details(cursor, post['thread'])
         post.update({'thread': thread})
 
+    cursor.close()
     return jsonify(code=0, response=post)
 
 
@@ -127,11 +128,11 @@ def post_list():
                 (thread, since, limit))
 
     posts = [i for i in cursor.fetchall()]
+    cursor.close()
 
     for post in posts:
         post.update({'date': str(post['date'])})  # TODO: bad code
 
-    cursor.close()
     return jsonify(code=0, response=posts)
 
 
@@ -191,7 +192,7 @@ def post_update():
     except MySQLdb.Error:
         db_connection.rollback()
 
-    post = db_queryes.post_details(post)
+    post = db_queryes.post_details(cursor, post)
     cursor.close()
     return jsonify(code=0, response=post)
 
@@ -215,7 +216,7 @@ def post_vote():
     except MySQLdb.Error:
         db_connection.rollback()
 
-    post = db_queryes.post_details(post)
+    post = db_queryes.post_details(cursor, post)
 
     cursor.close()
     return jsonify(code=0, response=post)

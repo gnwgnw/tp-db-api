@@ -2,6 +2,8 @@ import MySQLdb
 from flask import Blueprint, request, jsonify
 from settings import prefix, db_connection
 from utils import db_queryes
+from utils.db_queryes import list_following
+from utils.db_queryes import list_followers
 
 __author__ = 'gexogen'
 forum_api = Blueprint('forum_api', __name__)
@@ -17,13 +19,13 @@ def forum_create():
 
     try:
         cursor.execute("""INSERT INTO `forums` (`name`, `short_name`, `user`) VALUE (%s, %s, %s);""",
-                         (name, short_name, user))
+                       (name, short_name, user))
         db_connection.commit()
 
     except MySQLdb.Error:
         db_connection.rollback()
 
-    forum = db_queryes.forum_details(short_name)
+    forum = db_queryes.forum_details(cursor, short_name)
 
     cursor.close()
     return jsonify(code=0, response=forum)
@@ -37,12 +39,15 @@ def forum_details():
     if short_name is None:
         return jsonify(code=1, response="forum_details error")  # TODO error code
 
-    forum = db_queryes.forum_details(short_name)
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+
+    forum = db_queryes.forum_details(cursor, short_name)
 
     if 'user' in related:
-        user = db_queryes.user_details(forum['user'])
+        user = db_queryes.user_details(cursor, forum['user'])
         forum.update({'user': user})
 
+    cursor.close()
     return jsonify(code=0, response=forum)
 
 
@@ -62,24 +67,24 @@ def forum_list_posts():
     cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
     if order == 'desc':
         cursor.execute("""SELECT * FROM `posts` WHERE `forum` = %s AND `date` >= %s ORDER BY `date` DESC LIMIT %s;""",
-                         (forum, since, limit))  # TODO: bad code - excess condition
+                       (forum, since, limit))  # TODO: bad code - excess condition
     else:
         cursor.execute("""SELECT * FROM `posts` WHERE `forum` = %s AND `date` >= %s ORDER BY `date` ASC LIMIT %s;""",
-                         (forum, since, limit))  # TODO: bad code - excess condition
+                       (forum, since, limit))  # TODO: bad code - excess condition
 
     posts = [i for i in cursor.fetchall()]
 
     for post in posts:
         if 'user' in related:
-            user = db_queryes.user_details(post['user'])
+            user = db_queryes.user_details(cursor, post['user'])
             post.update({'user': user})
 
         if 'forum' in related:
-            forum = db_queryes.forum_details(post['forum'])
+            forum = db_queryes.forum_details(cursor, post['forum'])
             post.update({'forum': forum})
 
         if 'thread' in related:
-            thread = db_queryes.thread_details(post['thread'])
+            thread = db_queryes.thread_details(cursor, post['thread'])
             post.update({'thread': thread})
 
         post.update({'date': str(post['date'])})  # TODO: bad code
@@ -116,11 +121,11 @@ def forum_list_threads():
 
     for thread in threads:
         if 'user' in related:
-            user = db_queryes.user_details(thread['user'])
+            user = db_queryes.user_details(cursor, thread['user'])
             thread.update({'user': user})
 
         if 'forum' in related:
-            forum = db_queryes.forum_details(thread['forum'])
+            forum = db_queryes.forum_details(cursor, thread['forum'])
             thread.update({'forum': forum})
 
         thread.update({'date': str(thread['date'])})  # TODO: bad code
@@ -159,11 +164,8 @@ def forum_list_users():
     users = [i for i in cursor.fetchall()]
 
     for user in users:
-        cursor.execute("""SELECT `followee` FROM `follower_followee` WHERE `follower` = %s;""", user['email'])
-        following = [i['followee'] for i in cursor.fetchall()]
-
-        cursor.execute("""SELECT `follower` FROM `follower_followee` WHERE `followee` = %s;""", user['email'])
-        followers = [i['follower'] for i in cursor.fetchall()]
+        following = list_following(cursor, user['id'])
+        followers = list_followers(cursor, user['id'])
 
         cursor.execute("""SELECT `thread` FROM `users_threads` WHERE `user` = %s;""", user['email'])
         threads = [i['thread'] for i in cursor.fetchall()]

@@ -24,7 +24,7 @@ def thread_create():
         cursor.execute("""INSERT INTO `threads`
                           (`isDeleted`, `forum`, `title`, `isClosed`, `user`, `date`, `message`, `slug`)
                           VALUE (%s, %s, %s, %s, %s, %s, %s, %s);""",
-                         (is_deleted, forum, title, is_closed, user, date, message, slug))
+                       (is_deleted, forum, title, is_closed, user, date, message, slug))
 
         thread_id = cursor.lastrowid
 
@@ -33,10 +33,19 @@ def thread_create():
     except MySQLdb.Error:
         db_connection.rollback()
 
-    cursor.execute("""SELECT * FROM `threads` WHERE `id` = %s""", thread_id)
-    thread = cursor.fetchone()
-
     cursor.close()
+
+    thread = {
+        "date": date,
+        "forum": forum,
+        "id": thread_id,
+        "isClosed": is_closed,
+        "isDeleted": is_deleted,
+        "message": message,
+        "slug": slug,
+        "title": title,
+        "user": user
+    }
     return jsonify(code=0, response=thread)
 
 
@@ -52,15 +61,19 @@ def thread_details():
     if id is None or id < 1:
         return jsonify(code=1, response="thread_details error")  # TODO error code
 
-    thread = db_queryes.thread_details(id)
+    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+
+    thread = db_queryes.thread_details(cursor, id)
 
     if 'user' in related:
-        user = db_queryes.user_details(thread['user'])
+        user = db_queryes.user_details(cursor, thread['user'])
         thread.update({'user': user})
 
     if 'forum' in related:
-        forum = db_queryes.forum_details(thread['forum'])
+        forum = db_queryes.forum_details(cursor, thread['forum'])
         thread.update({'forum': forum})
+
+    cursor.close()
 
     return jsonify(code=0, response=thread)
 
@@ -178,8 +191,6 @@ def thread_restore():
 
 @thread_api.route(prefix + '/thread/close/', methods=['POST'])
 def thread_close():
-    print request.content_type
-
     thread = request.json.get('thread', None)
     thread = int(thread)
 
@@ -220,12 +231,12 @@ def thread_update():
     cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
     try:
         cursor.execute("""UPDATE `threads` SET `message` = %s, `slug` = %s WHERE `id` = %s;""",
-                         (message, slug, thread))  # TODO: make view
+                       (message, slug, thread))  # TODO: make view
         db_connection.commit()
     except MySQLdb.Error:
         db_connection.rollback()
 
-    thread = db_queryes.thread_details(thread)
+    thread = db_queryes.thread_details(cursor, thread)
 
     cursor.close()
     return jsonify(code=0, response={'thread': thread})
@@ -251,7 +262,7 @@ def thread_vote():
     except MySQLdb.Error:
         db_connection.rollback()
 
-    thread = db_queryes.thread_details(thread)
+    thread = db_queryes.thread_details(cursor, thread)
 
     cursor.close()
     return jsonify(code=0, response=thread)

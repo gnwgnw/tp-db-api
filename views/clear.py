@@ -10,7 +10,7 @@ clear_api = Blueprint('clear_api', __name__)
 
 @clear_api.route(prefix + '/clear/', methods=['POST'])
 def clear():
-    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = db_connection.cursor()
     sql = ''
     sql_file = open(sql_file_name)
     for line in sql_file:

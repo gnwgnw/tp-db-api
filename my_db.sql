@@ -6,14 +6,16 @@ CREATE TABLE users (
   about       TEXT,
   isAnonymous BOOL DEFAULT FALSE  NOT NULL,
   email       VARCHAR(255) UNIQUE NOT NULL,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  KEY email_id (email, id)
 );
 
 DROP TABLE IF EXISTS follower_followee;
 CREATE TABLE follower_followee (
-  follower VARCHAR(255) NOT NULL,
-  followee VARCHAR(255) NOT NULL,
-  PRIMARY KEY (follower, followee)
+  follower INT NOT NULL,
+  followee INT NOT NULL,
+  PRIMARY KEY (follower, followee),
+  KEY f_f (followee, follower)
 );
 
 DROP TABLE IF EXISTS forums;
@@ -22,7 +24,8 @@ CREATE TABLE forums (
   name       VARCHAR(255)       NOT NULL UNIQUE,
   short_name VARCHAR(255)       NOT NULL UNIQUE,
   user       VARCHAR(255)       NOT NULL,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  KEY (short_name)
 );
 
 DROP TABLE IF EXISTS threads;
@@ -40,7 +43,8 @@ CREATE TABLE threads (
   date      DATETIME           NOT NULL,
   message   TEXT               NOT NULL,
   slug      VARCHAR(255)       NOT NULL,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  KEY (forum)
 );
 
 DROP TABLE IF EXISTS posts;
@@ -60,7 +64,9 @@ CREATE TABLE posts (
   user          VARCHAR(255)       NOT NULL,
   date          DATETIME           NOT NULL,
   message       TEXT               NOT NULL,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  KEY (user),
+  KEY (forum)
 );
 
 DROP TABLE IF EXISTS users_threads;
