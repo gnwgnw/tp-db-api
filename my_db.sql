@@ -1,11 +1,11 @@
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
   id          INT AUTO_INCREMENT  NOT NULL,
-  username    VARCHAR(25),
-  name        VARCHAR(25),
+  username    CHAR(25),
+  name        CHAR(25),
   about       TEXT,
   isAnonymous BOOL DEFAULT FALSE  NOT NULL,
-  email       VARCHAR(25) UNIQUE NOT NULL,
+  email       CHAR(25) UNIQUE NOT NULL,
   PRIMARY KEY (id),
   KEY email_id (email, id)
 );
@@ -21,9 +21,9 @@ CREATE TABLE follower_followee (
 DROP TABLE IF EXISTS forums;
 CREATE TABLE forums (
   id         INT AUTO_INCREMENT NOT NULL,
-  name       VARCHAR(35)       NOT NULL UNIQUE,
-  short_name VARCHAR(35)       NOT NULL UNIQUE,
-  user       VARCHAR(25)       NOT NULL,
+  name       CHAR(35)       NOT NULL UNIQUE,
+  short_name CHAR(35)       NOT NULL UNIQUE,
+  user       CHAR(25)       NOT NULL,
   PRIMARY KEY (id),
   KEY (short_name)
 );
@@ -37,12 +37,12 @@ CREATE TABLE threads (
   points    INT DEFAULT 0      NOT NULL,
   isDeleted BOOL DEFAULT FALSE NOT NULL,
   isClosed  BOOL DEFAULT FALSE NOT NULL,
-  forum     VARCHAR(35)       NOT NULL,
-  title     VARCHAR(50)       NOT NULL,
-  user      VARCHAR(25)       NOT NULL,
+  forum     CHAR(35)       NOT NULL,
+  title     CHAR(50)       NOT NULL,
+  user      CHAR(25)       NOT NULL,
   date      DATETIME           NOT NULL,
   message   TEXT               NOT NULL,
-  slug      VARCHAR(50)       NOT NULL,
+  slug      CHAR(50)       NOT NULL,
   PRIMARY KEY (id),
   KEY (forum)
 );
@@ -60,8 +60,8 @@ CREATE TABLE posts (
   isEdited      BOOL DEFAULT FALSE NOT NULL,
   isApproved    BOOL DEFAULT FALSE NOT NULL,
   isHighlighted BOOL DEFAULT FALSE NOT NULL,
-  forum         VARCHAR(35)       NOT NULL,
-  user          VARCHAR(25)       NOT NULL,
+  forum         CHAR(35)       NOT NULL,
+  user          CHAR(25)       NOT NULL,
   date          DATETIME           NOT NULL,
   message       TEXT               NOT NULL,
   PRIMARY KEY (id),
@@ -71,7 +71,7 @@ CREATE TABLE posts (
 
 DROP TABLE IF EXISTS users_threads;
 CREATE TABLE users_threads (
-  user   VARCHAR(25) NOT NULL,
+  user   CHAR(25) NOT NULL,
   thread INT          NOT NULL,
   PRIMARY KEY (user, thread)
 );
