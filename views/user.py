@@ -18,7 +18,7 @@ def user_create():
     if params['isAnonymous'] is None:
         params['isAnonymous'] = False
 
-    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = db_connection.cursor()
     try:
 
         cursor.execute(

@@ -19,7 +19,7 @@ def thread_create():
     message = request.json.get('message', None)
     slug = request.json.get('slug', None)
 
-    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = db_connection.cursor()
     try:
         cursor.execute("""INSERT INTO `threads`
                           (`isDeleted`, `forum`, `title`, `isClosed`, `user`, `date`, `message`, `slug`)
@@ -158,7 +158,7 @@ def thread_remove():
     thread = request.json.get('thread', None)
     thread = int(thread)  # TODO: bad code
 
-    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = db_connection.cursor()
 
     try:
         cursor.execute("""UPDATE `threads` SET `isDeleted` = TRUE, `posts` = 0 WHERE `id` = %s;""", thread)
@@ -177,7 +177,7 @@ def thread_restore():
     thread = request.json.get('thread', None)
     thread = int(thread)
 
-    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = db_connection.cursor()
     try:
         count = cursor.execute("""UPDATE `posts` SET `isDeleted` = FALSE WHERE `thread` = %s;""", thread)
         cursor.execute("""UPDATE `threads` SET `isDeleted` = FALSE, `posts` = %s WHERE `id` = %s;""", (count, thread))  # TODO: make view
@@ -194,7 +194,7 @@ def thread_close():
     thread = request.json.get('thread', None)
     thread = int(thread)
 
-    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = db_connection.cursor()
     try:
         cursor.execute("""UPDATE `threads` SET `isClosed` = TRUE WHERE `id` = %s;""", thread)  # TODO: make view
         db_connection.commit()
@@ -210,7 +210,7 @@ def thread_open():
     thread = request.json.get('thread', None)
     thread = int(thread)
 
-    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = db_connection.cursor()
     try:
         cursor.execute("""UPDATE `threads` SET `isClosed` = FALSE WHERE `id` = %s;""", thread)  # TODO: make view
         db_connection.commit()
@@ -272,7 +272,7 @@ def thread_vote():
 def thread_subscribe():
     user = request.json.get('user', None)
     thread = request.json.get('thread', None)
-    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = db_connection.cursor()
 
     try:
         cursor.execute("""INSERT INTO `users_threads` (`user`, `thread`) VALUE (%s, %s);""",
@@ -289,7 +289,7 @@ def thread_subscribe():
 def thread_unsubscribe():
     user = request.json.get('user', None)
     thread = request.json.get('thread', None)
-    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = db_connection.cursor()
 
     try:
         cursor.execute("""DELETE FROM `users_threads` WHERE `user` = %s AND `thread` = %s;""", (user, thread))

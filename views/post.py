@@ -22,7 +22,7 @@ def post_create():
     date = request.json.get('date', None)
     message = request.json.get('message', None)
 
-    cursor = db_connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = db_connection.cursor()
 
     try:
         cursor.execute(
