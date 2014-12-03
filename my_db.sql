@@ -66,7 +66,8 @@ CREATE TABLE posts (
   date          DATETIME           NOT NULL,
   PRIMARY KEY (id),
   KEY (user),
-  KEY (forum)
+  KEY (forum),
+  KEY (id, thread)
 );
 
 DROP TABLE IF EXISTS users_threads;
