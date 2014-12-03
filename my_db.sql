@@ -8,7 +8,7 @@ CREATE TABLE users (
   email       CHAR(25) UNIQUE NOT NULL,
   PRIMARY KEY (id),
   KEY email_id (email, id)
-);
+)ENGINE=InnoDB;
 
 DROP TABLE IF EXISTS follower_followee;
 CREATE TABLE follower_followee (
@@ -16,7 +16,7 @@ CREATE TABLE follower_followee (
   followee INT NOT NULL,
   PRIMARY KEY (follower, followee),
   KEY f_f (followee, follower)
-);
+)ENGINE=InnoDB;
 
 DROP TABLE IF EXISTS forums;
 CREATE TABLE forums (
@@ -26,7 +26,7 @@ CREATE TABLE forums (
   user       CHAR(25)       NOT NULL,
   PRIMARY KEY (id),
   KEY (short_name)
-);
+)ENGINE=InnoDB;
 
 DROP TABLE IF EXISTS threads;
 CREATE TABLE threads (
@@ -45,7 +45,7 @@ CREATE TABLE threads (
   slug      CHAR(50)       NOT NULL,
   PRIMARY KEY (id),
   KEY (forum)
-);
+)ENGINE=InnoDB;
 
 DROP TABLE IF EXISTS posts;
 CREATE TABLE posts (
@@ -67,11 +67,11 @@ CREATE TABLE posts (
   PRIMARY KEY (id),
   KEY (user),
   KEY (forum)
-);
+)ENGINE=InnoDB;
 
 DROP TABLE IF EXISTS users_threads;
 CREATE TABLE users_threads (
   user   CHAR(25) NOT NULL,
   thread INT          NOT NULL,
   PRIMARY KEY (user, thread)
-);
+)ENGINE=InnoDB;
