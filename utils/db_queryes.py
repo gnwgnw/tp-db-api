@@ -5,7 +5,7 @@ __author__ = 'gexogen'
 
 
 def list_following(cursor, user_id):
-    cursor.execute("""SELECT `u1`.`email` FROM `users` AS `u1`
+    cursor.execute("""SELECT `u1`.`email` FROM `users` AS `u1` IGNORE INDEX (PRIMARY)
                       INNER JOIN `follower_followee` AS `ff` ON `u1`.`id` = `ff`.`followee`
                       WHERE `ff`.`follower` = %s;""", user_id)
     following = [i['email'] for i in cursor.fetchall()]
@@ -14,7 +14,7 @@ def list_following(cursor, user_id):
 
 
 def list_followers(cursor, user_id):
-    cursor.execute("""SELECT `u1`.`email` FROM `users` AS `u1`
+    cursor.execute("""SELECT `u1`.`email` FROM `users` AS `u1` IGNORE INDEX (PRIMARY)
                       INNER JOIN `follower_followee` AS `ff` ON `u1`.`id` = `ff`.`follower`
                       WHERE `ff`.`followee` = %s;""", user_id)
     followers = [i['email'] for i in cursor.fetchall()]

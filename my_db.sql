@@ -1,13 +1,13 @@
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
   id          INT AUTO_INCREMENT  NOT NULL,
-  email       CHAR(25) UNIQUE NOT NULL,
+  email       CHAR(25) UNIQUE     NOT NULL,
   username    CHAR(25),
   name        CHAR(25),
   about       TEXT,
   isAnonymous BOOL DEFAULT FALSE  NOT NULL,
   PRIMARY KEY (id),
-  KEY email_id (email, id)
+  KEY id_email (id, email)
 );
 
 DROP TABLE IF EXISTS follower_followee;
@@ -44,15 +44,16 @@ CREATE TABLE threads (
   date      DATETIME           NOT NULL,
   message   TEXT               NOT NULL,
   PRIMARY KEY (id),
-  KEY (forum)
+  KEY forum_date (forum, date),
+  KEY user_date (user, date)
 );
 
 DROP TABLE IF EXISTS posts;
 CREATE TABLE posts (
   id            INT AUTO_INCREMENT NOT NULL,
   message       TEXT               NOT NULL,
-  forum         CHAR(35)       NOT NULL,
-  user          CHAR(25)       NOT NULL,
+  forum         CHAR(35)           NOT NULL,
+  user          CHAR(25)           NOT NULL,
   parent        INT DEFAULT NULL,
   thread        INT                NOT NULL,
   likes         INT DEFAULT 0      NOT NULL,
@@ -65,9 +66,9 @@ CREATE TABLE posts (
   isHighlighted BOOL DEFAULT FALSE NOT NULL,
   date          DATETIME           NOT NULL,
   PRIMARY KEY (id),
-  KEY (user),
-  KEY (forum),
-  KEY (id, thread)
+  KEY user_date (user, date),
+  KEY forum_date (forum, date),
+  KEY thread_date (thread, date)
 );
 
 DROP TABLE IF EXISTS users_threads;
